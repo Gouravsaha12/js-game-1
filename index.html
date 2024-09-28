@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alien Shooter</title>
     <style>
-        body,
-        html {
+        body, html {
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -50,12 +49,11 @@
         let lastBulletTime = 0;
         let lastAlienTime = 0;
         let alienSpawnInterval = 1500;
-        const bulletCooldown = 500;
-        let alienSpeed = 3;
-        const spawnIntervalDecreaseRate = 30; // Rate at which alien spawn interval decreases
-        const minSpawnInterval = 500; // Minimum spawn interval to prevent overwhelming difficulty
+        const bulletCooldown = 50;
+        let alienSpeed = 1;
+        const spawnIntervalDecreaseRate = 30;
+        const minSpawnInterval = 500;
 
-        // New variables for managing tutorial and game state
         let tutorialActive = true;
         let gameStarted = false;
 
@@ -64,7 +62,7 @@
                 this.x = startX;
                 this.y = startY;
                 this.angle = angle;
-                this.speed = 15;
+                this.speed = 5;
                 this.width = 20;
                 this.height = 10;
             }
@@ -106,8 +104,6 @@
             if (currentTime - lastAlienTime >= alienSpawnInterval && !gameOver) {
                 aliens.push(new Alien());
                 lastAlienTime = currentTime;
-
-                // Decrease spawn interval over time, but don't go below minimum
                 alienSpawnInterval = Math.max(minSpawnInterval, alienSpawnInterval - spawnIntervalDecreaseRate);
             }
         }
@@ -186,12 +182,12 @@
             if (tutorialActive) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
+
                 ctx.font = '48px Roboto';
                 ctx.fillStyle = 'white';
                 ctx.textAlign = 'center';
                 ctx.fillText('Alien Shooter Game', canvas.width / 2, canvas.height / 2 - 100);
-                
+
                 ctx.font = '32px Roboto';
                 ctx.fillText('Move your mouse to control the hand', canvas.width / 2, canvas.height / 2 - 30);
                 ctx.fillText('Left-click to shoot bullets', canvas.width / 2, canvas.height / 2 + 10);
@@ -208,15 +204,13 @@
 
                 if (bullet) {
                     bullet.update();
-                    if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    if (bullet.x < -50 || bullet.x > canvas.width + 50 || bullet.y < -50 || bullet.y > canvas.height + 50) {
                         bullet = null;
                     }
                 }
 
                 aliens.forEach(alien => alien.update());
                 aliens = aliens.filter(alien => alien.x < canvas.width);
-
-                alienSpeed += 0.001; // Increase alien speed gradually
             }
         }
 
@@ -224,30 +218,28 @@
             if (!tutorialActive) {
                 const mouseY = event.clientY - canvas.offsetTop;
                 const centerY = canvas.height / 2;
-                handAngle = -((mouseY - centerY) / centerY) * 45; // Reverse rotation
+                handAngle = -((mouseY - centerY) / centerY) * 45;
                 handAngle = Math.max(-45, Math.min(45, handAngle));
             }
         }
 
         function handleMouseClick(event) {
-            if (!tutorialActive) {
-                if (!gameOver && event.button === 0) { // Left click
-                    const currentTime = Date.now();
-                    if (currentTime - lastBulletTime >= bulletCooldown) {
-                        const handCenterX = canvas.width / 2;
-                        const handCenterY = canvas.height / 2;
-                        const bulletOffsetX = -280;
-                        const bulletOffsetY = -16;
-
-                        const rotatedX = handCenterX + (bulletOffsetX * Math.cos(handAngle * Math.PI / 180) - bulletOffsetY * Math.sin(handAngle * Math.PI / 180));
-                        const rotatedY = handCenterY + (bulletOffsetX * Math.sin(handAngle * Math.PI / 180) + bulletOffsetY * Math.cos(handAngle * Math.PI / 180));
-
-                        bullet = new Bullet(rotatedX, rotatedY, handAngle);
-                        lastBulletTime = currentTime;
-                    }
-                }
-            } else {
+            if (tutorialActive) {
                 startGame();
+            } else if (!gameOver && event.button === 0) {
+                const currentTime = Date.now();
+                if (currentTime - lastBulletTime >= bulletCooldown) {
+                    const handCenterX = canvas.width / 2;
+                    const handCenterY = canvas.height / 2;
+                    const bulletOffsetX = -280;
+                    const bulletOffsetY = -16;
+
+                    const rotatedX = handCenterX + (bulletOffsetX * Math.cos(handAngle * Math.PI / 180) - bulletOffsetY * Math.sin(handAngle * Math.PI / 180));
+                    const rotatedY = handCenterY + (bulletOffsetX * Math.sin(handAngle * Math.PI / 180) + bulletOffsetY * Math.cos(handAngle * Math.PI / 180));
+
+                    bullet = new Bullet(rotatedX, rotatedY, handAngle);
+                    lastBulletTime = currentTime;
+                }
             }
         }
 
@@ -272,8 +264,8 @@
             gameOver = false;
             lastBulletTime = 0;
             lastAlienTime = 0;
-            alienSpeed = 3; // Reset alien speed
-            alienSpawnInterval = 1500; // Reset spawn interval
+            alienSpeed = 1;
+            alienSpawnInterval = 1500;
             gameStarted = true;
         }
 
@@ -284,19 +276,10 @@
         }
 
         document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mousedown', handleMouseClick);
+        document.addEventListener('click', handleMouseClick);
         document.addEventListener('keydown', handleKeydown);
 
-        Promise.all([bgImage, handImage, bulletImage, alienImage].map(img => new Promise(resolve => img.onload = resolve)))
-            .then(() => {
-                gameLoop();
-            });
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            draw();
-        });
+        gameLoop();
     </script>
 </body>
 
