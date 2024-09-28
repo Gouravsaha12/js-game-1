@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Shooter</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const bgImage = new Image();
+        const handImage = new Image();
+        const bulletImage = new Image();
+        const alienImage = new Image();
+        bgImage.src = 'assets/car_bg.png';
+        handImage.src = 'assets/hand.png';
+        bulletImage.src = 'assets/bullet.png';
+        alienImage.src = 'assets/alien.png';
+
+        let handAngle = 0;
+        let bullet = null;
+        let aliens = [];
+        let score = 0;
+        let gameOver = false;
+        let lastBulletTime = 0;
+        let lastAlienTime = 0;
+        let alienSpawnInterval = 1500;
+        const bulletCooldown = 500;
+        let alienSpeed = 3;
+        const spawnIntervalDecreaseRate = 30; // Rate at which alien spawn interval decreases
+        const minSpawnInterval = 500; // Minimum spawn interval to prevent overwhelming difficulty
+
+        // New variables for managing tutorial and game state
+        let tutorialActive = true;
+        let gameStarted = false;
+
+        class Bullet {
+            constructor(startX, startY, angle) {
+                this.x = startX;
+                this.y = startY;
+                this.angle = angle;
+                this.speed = 15;
+                this.width = 20;
+                this.height = 10;
+            }
+
+            update() {
+                this.x -= Math.cos(this.angle * Math.PI / 180) * this.speed;
+                this.y -= Math.sin(this.angle * Math.PI / 180) * this.speed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle * Math.PI / 180);
+                ctx.drawImage(bulletImage, -this.width / 2, -this.height / 2, this.width, this.height);
+                ctx.restore();
+            }
+        }
+
+        class Alien {
+            constructor() {
+                this.width = 130;
+                this.height = 130;
+                this.x = -this.width;
+                this.y = Math.random() * (canvas.height - this.height);
+                this.speed = alienSpeed;
+            }
+
+            update() {
+                this.x += this.speed;
+            }
+
+            draw() {
+                ctx.drawImage(alienImage, this.x, this.y, this.width, this.height);
+            }
+        }
+
+        function spawnAlien() {
+            const currentTime = Date.now();
+            if (currentTime - lastAlienTime >= alienSpawnInterval && !gameOver) {
+                aliens.push(new Alien());
+                lastAlienTime = currentTime;
+
+                // Decrease spawn interval over time, but don't go below minimum
+                alienSpawnInterval = Math.max(minSpawnInterval, alienSpawnInterval - spawnIntervalDecreaseRate);
+            }
+        }
+
+        function checkCollisions() {
+            if (bullet) {
+                for (let i = aliens.length - 1; i >= 0; i--) {
+                    const alien = aliens[i];
+                    if (
+                        bullet.x < alien.x + alien.width &&
+                        bullet.x + bullet.width > alien.x &&
+                        bullet.y < alien.y + alien.height &&
+                        bullet.y + bullet.height > alien.y
+                    ) {
+                        score++;
+                        aliens.splice(i, 1);
+                        bullet = null;
+                        return;
+                    }
+                }
+            }
+        }
+
+        function checkGameOver() {
+            const centerX = canvas.width / 2;
+            aliens.forEach(alien => {
+                if (alien.x + alien.width >= centerX) {
+                    gameOver = true;
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+            const handX = canvas.width / 2;
+            const handY = canvas.height / 2;
+            const handWidth = canvas.width;
+            const handHeight = canvas.height;
+
+            ctx.save();
+            ctx.translate(handX, handY);
+            ctx.rotate(handAngle * Math.PI / 180);
+            ctx.drawImage(handImage, -handWidth / 2, -handHeight / 2, handWidth, handHeight);
+            ctx.restore();
+
+            if (bullet) {
+                bullet.draw();
+            }
+
+            aliens.forEach(alien => {
+                alien.draw();
+            });
+
+            if (gameStarted) {
+                ctx.font = '24px Roboto';
+                ctx.fillStyle = 'white';
+                ctx.fillText(`Score: ${score}`, 60, 30);
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.font = '72px Roboto';
+                ctx.fillStyle = 'red';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Game Over`, canvas.width / 2, canvas.height / 2 - 50);
+                ctx.font = '48px Roboto';
+                ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2);
+                ctx.font = '32px Roboto';
+                ctx.fillText('Press R to Restart', canvas.width / 2, canvas.height / 2 + 60);
+            }
+
+            if (tutorialActive) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.font = '48px Roboto';
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.fillText('Alien Shooter Game', canvas.width / 2, canvas.height / 2 - 100);
+                
+                ctx.font = '32px Roboto';
+                ctx.fillText('Move your mouse to control the hand', canvas.width / 2, canvas.height / 2 - 30);
+                ctx.fillText('Left-click to shoot bullets', canvas.width / 2, canvas.height / 2 + 10);
+                ctx.fillText('Avoid letting aliens pass the center', canvas.width / 2, canvas.height / 2 + 50);
+                ctx.fillText('Click or press any key to start!', canvas.width / 2, canvas.height / 2 + 90);
+            }
+        }
+
+        function update() {
+            if (!gameOver && gameStarted) {
+                spawnAlien();
+                checkCollisions();
+                checkGameOver();
+
+                if (bullet) {
+                    bullet.update();
+                    if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                        bullet = null;
+                    }
+                }
+
+                aliens.forEach(alien => alien.update());
+                aliens = aliens.filter(alien => alien.x < canvas.width);
+
+                alienSpeed += 0.001; // Increase alien speed gradually
+            }
+        }
+
+        function handleMouseMove(event) {
+            if (!tutorialActive) {
+                const mouseY = event.clientY - canvas.offsetTop;
+                const centerY = canvas.height / 2;
+                handAngle = -((mouseY - centerY) / centerY) * 45; // Reverse rotation
+                handAngle = Math.max(-45, Math.min(45, handAngle));
+            }
+        }
+
+        function handleMouseClick(event) {
+            if (!tutorialActive) {
+                if (!gameOver && event.button === 0) { // Left click
+                    const currentTime = Date.now();
+                    if (currentTime - lastBulletTime >= bulletCooldown) {
+                        const handCenterX = canvas.width / 2;
+                        const handCenterY = canvas.height / 2;
+                        const bulletOffsetX = -280;
+                        const bulletOffsetY = -16;
+
+                        const rotatedX = handCenterX + (bulletOffsetX * Math.cos(handAngle * Math.PI / 180) - bulletOffsetY * Math.sin(handAngle * Math.PI / 180));
+                        const rotatedY = handCenterY + (bulletOffsetX * Math.sin(handAngle * Math.PI / 180) + bulletOffsetY * Math.cos(handAngle * Math.PI / 180));
+
+                        bullet = new Bullet(rotatedX, rotatedY, handAngle);
+                        lastBulletTime = currentTime;
+                    }
+                }
+            } else {
+                startGame();
+            }
+        }
+
+        function handleKeydown(event) {
+            if (tutorialActive) {
+                startGame();
+            } else if (gameOver && event.key === 'r') {
+                restartGame();
+            }
+        }
+
+        function startGame() {
+            tutorialActive = false;
+            gameStarted = true;
+        }
+
+        function restartGame() {
+            handAngle = 0;
+            bullet = null;
+            aliens = [];
+            score = 0;
+            gameOver = false;
+            lastBulletTime = 0;
+            lastAlienTime = 0;
+            alienSpeed = 3; // Reset alien speed
+            alienSpawnInterval = 1500; // Reset spawn interval
+            gameStarted = true;
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mousedown', handleMouseClick);
+        document.addEventListener('keydown', handleKeydown);
+
+        Promise.all([bgImage, handImage, bulletImage, alienImage].map(img => new Promise(resolve => img.onload = resolve)))
+            .then(() => {
+                gameLoop();
+            });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            draw();
+        });
+    </script>
+</body>
+
+</html>
