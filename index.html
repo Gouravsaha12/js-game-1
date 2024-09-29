@@ -41,6 +41,11 @@
         bulletImage.src = 'assets/bullet.png';
         alienImage.src = 'assets/alien.png';
 
+        // Load audio files
+        const shootSoundSrc = 'assets/shoot.mp3';
+        const blastSoundSrc = 'assets/blast.mp3';
+        const bgMusic = new Audio('assets/bg.mp3');
+
         let handAngle = 0;
         let bullet = null;
         let aliens = [];
@@ -121,6 +126,9 @@
                         score++;
                         aliens.splice(i, 1);
                         bullet = null;
+                        // Create a new Audio object for each blast
+                        const blastSound = new Audio(blastSoundSrc);
+                        blastSound.play();
                         return;
                     }
                 }
@@ -132,6 +140,7 @@
             aliens.forEach(alien => {
                 if (alien.x + alien.width >= centerX) {
                     gameOver = true;
+                    bgMusic.pause(); // Stop background music when game over
                 }
             });
         }
@@ -239,6 +248,10 @@
 
                     bullet = new Bullet(rotatedX, rotatedY, handAngle);
                     lastBulletTime = currentTime;
+                    
+                    // Create a new Audio object for each shot
+                    const shootSound = new Audio(shootSoundSrc);
+                    shootSound.play();
                 }
             }
         }
@@ -254,6 +267,8 @@
         function startGame() {
             tutorialActive = false;
             gameStarted = true;
+            bgMusic.loop = true; // Set background music to loop
+            bgMusic.play(); // Start playing background music
         }
 
         function restartGame() {
@@ -267,6 +282,8 @@
             alienSpeed = 1;
             alienSpawnInterval = 1500;
             gameStarted = true;
+            bgMusic.currentTime = 0; // Reset background music to the beginning
+            bgMusic.play(); // Start playing background music
         }
 
         function gameLoop() {
